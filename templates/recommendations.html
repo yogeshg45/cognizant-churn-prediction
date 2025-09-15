@@ -1,0 +1,121 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="dashboard-container" style="display: flex; gap: 20px; width: 100%;">
+
+  <!-- LEFT SIDE: RECOMMENDATIONS -->
+  <div class="card" style="flex: 1; padding: 20px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+    <h2 style="margin-bottom: 15px; color: #1e293b;">Business Recommendations</h2>
+
+    {% if avg_prob %}
+      <p style="font-size: 16px; margin-bottom: 12px;">
+        Average churn probability from latest batch:
+        <strong style="color:#2563eb; font-size:18px;">{{ avg_prob }}</strong>
+      </p>
+      <div class="alert alert-warning" 
+           style="margin: 10px 0; padding: 12px; border-radius: 8px; background: #fef9c3; border-left: 6px solid #f59e0b; font-size: 15px;">
+        <strong>Model Insight:</strong> {{ agg_recommendation }}
+      </div>
+    {% else %}
+      <p style="font-size: 15px; color: #64748b;">No predictions available yet. Please upload customer data to generate insights.</p>
+    {% endif %}
+
+    <hr style="margin: 20px 0;"/>
+
+    <h3 style="margin-bottom: 12px; color: #334155;">Guidelines by Churn Probability Range</h3>
+    <ul style="list-style-type: none; padding-left: 0; font-size: 15px;">
+      <li 
+        {% if avg_prob and avg_prob|float <= 0.4 %}
+          style="background:#d1fae5; padding:10px; border-radius:8px; font-weight:bold;"
+        {% else %}
+          style="padding:10px;"
+        {% endif %}>
+        <strong>0.0 – 0.4 (Low risk):</strong>  
+        Maintain regular engagement through satisfaction surveys, reminders, and loyalty communications.
+      </li>
+
+      <li 
+        {% if avg_prob and avg_prob|float > 0.4 and avg_prob|float <= 0.6 %}
+          style="background:#fef3c7; padding:10px; border-radius:8px; font-weight:bold;"
+        {% else %}
+          style="padding:10px;"
+        {% endif %}>
+        <strong>0.4 – 0.6 (Medium risk):</strong>  
+        Segment customers and provide educational resources, proactive check-ins, and targeted support.
+      </li>
+
+      <li 
+        {% if avg_prob and avg_prob|float > 0.6 and avg_prob|float <= 0.8 %}
+          style="background:#fde68a; padding:10px; border-radius:8px; font-weight:bold;"
+        {% else %}
+          style="padding:10px;"
+        {% endif %}>
+        <strong>0.6 – 0.8 (High risk):</strong>  
+        Strengthen onboarding for new customers, offer incentives for renewals, and deploy proactive support.
+      </li>
+
+      <li 
+        {% if avg_prob and avg_prob|float > 0.8 %}
+          style="background:#fecaca; padding:10px; border-radius:8px; font-weight:bold;"
+        {% else %}
+          style="padding:10px;"
+        {% endif %}>
+        <strong>0.8 – 1.0 (Very high risk):</strong>  
+        Take immediate retention actions such as discounts, loyalty rewards, or personalized intervention calls.
+      </li>
+    </ul>
+  </div>
+
+  <!-- RIGHT SIDE: CHART -->
+  <div class="card" style="flex: 1; padding: 20px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+    <h2 style="margin-bottom: 15px; color: #1e293b;">Churn Risk Visualization</h2>
+    <canvas id="recommendChart" style="width:100%; height:350px;"></canvas>
+  </div>
+</div>
+
+<!-- Chart.js Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ctx = document.getElementById('recommendChart').getContext('2d');
+  const avgProb = {{ avg_prob|default(0)|float }};
+  
+  const recommendChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['0.0–0.4 Low', '0.4–0.6 Medium', '0.6–0.8 High', '0.8–1.0 Very High'],
+      datasets: [{
+        label: 'Churn Probability Range',
+        data: [
+          avgProb <= 0.4 ? avgProb : 0,
+          avgProb > 0.4 && avgProb <= 0.6 ? avgProb : 0,
+          avgProb > 0.6 && avgProb <= 0.8 ? avgProb : 0,
+          avgProb > 0.8 ? avgProb : 0
+        ],
+        backgroundColor: [
+          '#34d399', '#facc15', '#f97316', '#ef4444'
+        ],
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `Churn Probability: ${(avgProb * 100).toFixed(2)}%`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 1,
+          ticks: { callback: value => (value * 100) + '%' }
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}

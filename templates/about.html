@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+  .about-container {
+    display: flex;
+    gap: 2rem;
+    align-items: stretch; /* Make both sides equal height */
+  }
+  .about-text {
+    flex: 1;
+    min-width: 300px;
+  }
+  .about-image {
+    flex: 0 0 320px;
+    height: auto;
+  }
+  .about-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    display: block;
+  }
+</style>
+
+<div class="card about-container">
+  <div class="about-text">
+    <h2>About This Project</h2>
+    <p>{{ project_text }}</p>
+
+    <h3>Dataset Overview</h3>
+    <p>The dataset contains 16 anonymized numerical features named <code>feature_0</code> to <code>feature_15</code>. These features represent customer attributes and behaviors relevant to predicting insurance churn.</p>
+
+    <h3>How to Use This Application</h3>
+    <ol>
+      <li><strong>Upload your customer data CSV file</strong> on the <em>Upload & Predict</em> page. The file should include the anonymized features for each customer.</li>
+      <li><strong>Download the generated predictions</strong> once the processing completes. You can also explore the results interactively via the <em>Dashboard</em> page.</li>
+      <li><strong>Leverage the automated recommendations</strong> derived from churn probability scores to design and customize your customer retention campaigns, targeting at-risk customers effectively.</li>
+    </ol>
+
+    <h3>Purpose of the Tool</h3>
+    <p>This tool uses a machine learning model to estimate the likelihood of churn for each customer based on their feature data. Understanding these risks enables insurance companies to take proactive actions to retain valuable customers and reduce churn rates.</p>
+  </div>
+
+  <div class="about-image">
+    <img src="{{ url_for('static', filename='images/image2.png') }}" alt="Insurance Data Analysis Illustration" />
+  </div>
+</div>
+{% endblock %}

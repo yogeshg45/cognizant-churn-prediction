@@ -1,0 +1,226 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="dashboard-container">
+  <h2 class="dashboard-title">📊 Customer Churn Dashboard</h2>
+
+  <!-- KPI Cards -->
+  <div class="stats-grid">
+    <div class="stat kpi">
+      <div class="stat-value text-blue">{{ total }}</div>
+      <div class="stat-label">Total Customers</div>
+    </div>
+    <div class="stat kpi">
+      <div class="stat-value text-red">{{ churn_count }}</div>
+      <div class="stat-label">Predicted Churn</div>
+    </div>
+    <div class="stat kpi">
+      <div class="stat-value text-green">{{ no_churn_count }}</div>
+      <div class="stat-label">Predicted Safe</div>
+    </div>
+    <div class="stat kpi">
+      <div class="stat-value text-yellow">{{ avg_prob }}</div>
+      <div class="stat-label">Avg Churn Probability</div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="chart-row mt-6">
+    <div class="chart-card">
+      <h3>Churn vs No Churn</h3>
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Probability Distribution</h3>
+      <canvas id="histChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Recommendation Insights -->
+  <div class="chart-row mt-6">
+    <div class="chart-card full">
+      <h3>Recommendation Insights</h3>
+      <canvas id="recChart"></canvas>
+      <div id="recInsight" class="insight-box mt-4"></div>
+    </div>
+  </div>
+
+  <!-- Feature Importance -->
+  {% if feature_importance %}
+  <div class="feature-card mt-6">
+    <h3>🔑 Top Feature Importances</h3>
+    <ol>
+      {% for name, val in feature_importance %}
+        <li>{{ name }} — {{ '%.4f'|format(val) }}</li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const pieLabels = {{ pie_labels | safe }};
+const pieValues = {{ pie_values | safe }};
+const probs = {{ probs | safe }};
+
+// Pie Chart
+new Chart(document.getElementById("pieChart"), {
+  type: 'doughnut',
+  data: { 
+    labels: pieLabels, 
+    datasets: [{ 
+      data: pieValues, 
+      backgroundColor: ["#ef4444", "#10b981"],
+      borderWidth: 1
+    }] 
+  },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+
+// Histogram
+const ctx2 = document.getElementById("histChart").getContext('2d');
+if(probs.length > 0){
+  const bins = 10;
+  const counts = new Array(bins).fill(0);
+  probs.forEach(v => {
+    const idx = Math.min(Math.floor(v * bins), bins-1);
+    counts[idx] += 1;
+  });
+  const labels = counts.map((_,i) => `${(i/bins).toFixed(1)}-${((i+1)/bins).toFixed(1)}`);
+  new Chart(ctx2, {
+    type: 'bar',
+    data: { 
+      labels: labels, 
+      datasets: [{ label: 'Count', data: counts, backgroundColor:"#6366f1" }] 
+    },
+    options: { scales: { y: { beginAtZero: true } } }
+  });
+} else {
+  ctx2.fillStyle = "#999";
+  ctx2.fillText("No probability data", 10, 50);
+}
+
+// Recommendation Insights
+const ctx3 = document.getElementById("recChart").getContext('2d');
+let dominantRange = "N/A";
+if(probs.length > 0){
+  const ranges = ["0.0–0.4 Low", "0.4–0.6 Medium", "0.6–0.8 High", "0.8–1.0 Very High"];
+  const recCounts = [0,0,0,0];
+  probs.forEach(v => {
+    if(v <= 0.4) recCounts[0]++;
+    else if(v <= 0.6) recCounts[1]++;
+    else if(v <= 0.8) recCounts[2]++;
+    else recCounts[3]++;
+  });
+
+  // Find dominant range
+  const maxIdx = recCounts.indexOf(Math.max(...recCounts));
+  dominantRange = ranges[maxIdx];
+
+  new Chart(ctx3, {
+    type: 'bar',
+    data: { 
+      labels: ranges, 
+      datasets: [{ 
+        label: 'Customers per risk range', 
+        data: recCounts, 
+        backgroundColor: ["#10b981", "#facc15", "#f97316", "#ef4444"] 
+      }] 
+    },
+    options: { scales: { y: { beginAtZero: true } } }
+  });
+
+  // Add recommendation text
+  const insightBox = document.getElementById("recInsight");
+  const recMessages = {
+    "0.0–0.4 Low": "✅ Most customers are safe. Focus on loyalty programs and consistent service quality.",
+    "0.4–0.6 Medium": "⚠️ Some customers show uncertainty. Provide proactive engagement and personalized support.",
+    "0.6–0.8 High": "🚨 High churn risk detected. Launch retention offers and targeted communication strategies.",
+    "0.8–1.0 Very High": "🔥 Critical churn risk. Prioritize urgent, personalized interventions to prevent losses."
+  };
+  insightBox.innerHTML = `<strong>Insight:</strong> Majority of customers fall in the <em>${dominantRange}</em> risk range.<br/>${recMessages[dominantRange]}`;
+} else {
+  ctx3.fillStyle = "#999";
+  ctx3.fillText("No probability data", 10, 50);
+}
+</script>
+
+<style>
+.dashboard-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f8faff, #eef3ff);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+}
+.dashboard-title {
+  font-size: 1.6em;
+  font-weight: 700;
+  color: #1e1e2f;
+  margin-bottom: 20px;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+.kpi {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 18px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  transition: transform 0.2s ease;
+}
+.kpi:hover {
+  transform: translateY(-4px);
+}
+.stat-value { font-size: 1.8em; font-weight: bold; }
+.stat-label { font-size: 0.9em; color: #555; }
+.text-blue { color: #3b82f6; }
+.text-red { color: #ef4444; }
+.text-green { color: #10b981; }
+.text-yellow { color: #facc15; }
+.chart-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.chart-card {
+  flex: 1;
+  min-width: 320px;
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+.chart-card.full { width: 100%; }
+.chart-card h3 {
+  font-size: 1.05em;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #333;
+}
+.feature-card {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+.feature-card h3 {
+  margin-bottom: 12px;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #333;
+}
+.insight-box {
+  background: #f1f5f9;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 0.95em;
+  margin-top: 12px;
+  color: #1e293b;
+  line-height: 1.4em;
+}
+</style>
+{% endblock %}

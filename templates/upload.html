@@ -1,0 +1,180 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="upload-hero">
+  <!-- LEFT: Illustration -->
+  <div class="upload-left">
+    <img src="{{ url_for('static', filename='images/image3.png') }}" alt="Upload Illustration">
+  </div>
+
+  <!-- RIGHT: Text + Upload -->
+  <div class="upload-right">
+    <div class="upload-text">
+      <h2>Batch Upload (CSV)</h2>
+      <p>Upload a CSV file with your customer features. Preferred column names: <code>feature_0</code> … <code>feature_15</code>.</p>
+
+      <form id="uploadForm" action="{{ url_for('upload_predict') }}" method="post" enctype="multipart/form-data">
+        <div class="drag-drop" id="dragDrop">
+          <p>Drag & drop CSV here, or click to browse</p>
+          <input type="file" name="file" accept=".csv" required>
+        </div>
+        <button type="submit" class="btn primary">Upload & Predict</button>
+        <div class="progress-wrapper">
+          <div class="progress-bar" id="progressBar">0%</div>
+        </div>
+      </form>
+
+      <p class="hint">Accepted format: <strong>.csv</strong> | Max size: 10MB</p>
+    </div>
+  </div>
+</div>
+
+<style>
+.upload-hero {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  flex-wrap: wrap;
+  gap: 40px;
+  padding: 20px;
+}
+
+/* LEFT: Image */
+.upload-left {
+  flex: 0 0 auto;
+  max-width: 600px; /* normal size */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.upload-left img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  opacity: 0.85;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.upload-left img:hover {
+  transform: scale(1.05);
+  opacity: 0.9;
+}
+
+/* RIGHT: Text directly on background */
+.upload-right {
+  flex: 0 0 auto;
+  max-width: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: left;
+  color: #1e293b;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.upload-text h2 {
+  font-size: 2rem;
+  margin-bottom: 16px;
+}
+.upload-text p {
+  font-size: 1rem;
+  margin-bottom: 25px;
+  color: #334155;
+}
+
+/* Drag-and-drop */
+.drag-drop {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 25px;
+  text-align: center;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: border-color 0.3s, background 0.3s;
+  background: rgba(255,255,255,0.1);
+  color: #475569;
+}
+.drag-drop:hover {
+  border-color: #2563eb;
+  background: rgba(255,255,255,0.2);
+}
+.drag-drop input[type="file"] { display: none; }
+
+/* Buttons */
+.btn.primary {
+  background: #2563eb;
+  color: #fff;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  margin-top: 15px;
+}
+.btn.primary:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+}
+
+/* Progress Bar */
+.progress-wrapper {
+  width: 100%;
+  background: rgba(229,231,235,0.5);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 15px;
+}
+.progress-bar {
+  height: 22px;
+  width: 0%;
+  background: linear-gradient(90deg,#2563eb,#3b82f6);
+  color: #fff;
+  font-size: 0.9rem;
+  text-align: center;
+  line-height: 22px;
+  border-radius: 12px;
+  transition: width 0.3s ease;
+}
+
+/* Hint */
+.hint { font-size:0.85rem; color:#475569; margin-top:12px; }
+
+/* Responsive */
+@media (max-width: 992px) {
+  .upload-hero { flex-direction: column; align-items: center; }
+  .upload-left { max-width: 80%; margin-bottom: 20px; }
+  .upload-right { max-width: 90%; text-align: center; }
+}
+</style>
+
+<script>
+// Drag-and-drop
+const dragDrop = document.getElementById('dragDrop');
+const fileInput = dragDrop.querySelector('input[type="file"]');
+dragDrop.addEventListener('click', () => fileInput.click());
+dragDrop.addEventListener('dragover', (e) => e.preventDefault());
+dragDrop.addEventListener('drop', (e) => {
+  e.preventDefault();
+  fileInput.files = e.dataTransfer.files;
+});
+
+// Progress bar simulation
+const uploadForm = document.getElementById('uploadForm');
+const progressBar = document.getElementById('progressBar');
+uploadForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  let width = 0;
+  progressBar.style.width = '0%';
+  progressBar.innerText = '0%';
+  const interval = setInterval(() => {
+    if(width >= 100) {
+      clearInterval(interval);
+      progressBar.innerText = 'Upload Complete';
+      uploadForm.submit();
+    } else {
+      width += 5;
+      progressBar.style.width = width + '%';
+      progressBar.innerText = width + '%';
+    }
+  }, 100);
+});
+</script>
+{% endblock %}

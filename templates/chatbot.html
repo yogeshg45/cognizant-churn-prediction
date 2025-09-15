@@ -1,0 +1,169 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<!-- Left fixed image container (enlarged) -->
+<div style="position: fixed; top: 50%; left: 40px; transform: translateY(-50%);
+            height: 600px; width: 600px; z-index: 1050; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 18px transparent; border-radius: 14px; background: transparent; overflow: hidden;">
+  <img src="/static/images/image.png" alt="Left Image" style="max-height: 100%; max-width: 100%; object-fit: contain; border-radius: 14px;" />
+</div>
+
+<!-- Right fixed chat container -->
+<div style="position: fixed; top: 50%; left: calc(40px + 600px + 20px); right: auto; transform: translateY(-50%);
+            height: 600px; z-index: 900; display: flex; box-shadow: 0 2px 18px transparent; border-radius: 14px;
+            background: transparent; overflow: hidden; max-width: 900px; width: 800px;">
+
+  <!-- Toggle button -->
+  <button id="history-toggle" title="Toggle History"
+          style="width: 50px; height: 54px; background: #2563eb; color: white; font-size: 24px;
+                 border: none; cursor: pointer; outline: none; transition: background 0.25s;
+                 display: flex; align-items: center; justify-content: center; user-select: none;
+                 position: absolute; left: 0; top: 0; border-radius: 0 6px 6px 0; z-index: 1100;">
+    ☰
+  </button>
+
+  <!-- Left: History panel -->
+  <div id="chat-history" style="width: 0; overflow: hidden; border-right: 1.5px solid #eee; padding: 1rem 0 1rem 0;
+                                 transition: width 0.3s ease; font-family: monospace; font-weight: 600;">
+    <h5 style="margin-left: 1rem;">History (Last 5)</h5>
+    <ul id="history-list" style="list-style: none; padding: 0 1rem; margin-top: 0.5rem;">
+      <!-- History items populate here -->
+    </ul>
+  </div>
+
+  <!-- Right: Chat panel -->
+  <div id="chatbox" style="flex-grow: 1; display: flex; flex-direction: column; min-width: 300px;">
+    <div class="chat-header" style="background: #214e91; color: #fff; padding: 1.3rem 1.5rem; font-weight: 700; font-size: 1.25rem; height: 54px;">
+      🔎 Insurance Churn Chatbot
+    </div>
+    <div class="chat-body" id="chat-body" style="flex: 1; overflow-y: auto; padding: 1.5rem;">
+      <div class="chat-bubble bot" style="max-width: 80%; margin-bottom: 1rem; padding: 0.9rem 1.1rem; border-radius: 1.2em; font-size: 1.09rem; line-height: 1.36; word-break: break-word; background: #f4f8fb; color: #111; border-bottom-left-radius: 0.3em;">
+        Hello! Ask me anything about customer churn, risk, or recommendations based on recent predictions.
+      </div>
+    </div>
+    <form id="chat-form" autocomplete="off" style="display: flex; border-top: 1px solid #e1e7f0; background: #f5f7fa; padding: 0.6rem 1rem;">
+      <input type="text" id="message-input" class="form-control" placeholder="Type your question..." required autofocus
+             style="flex: 1; border: none; outline: none; font-size: 1.09rem; background: transparent; margin-right: 0.4rem; max-width: calc(100% - 110px);">
+      <button type="submit" id="send-btn" style="background: #2563eb; color: #fff; border: none; padding: 0.55rem 1rem; border-radius: 0.7em; font-weight: 600; transition: background 0.2s; min-width: 100px;">
+        Send
+      </button>
+    </form>
+  </div>
+</div>
+
+<style>
+  body {
+    background: #f9faff;
+    padding-bottom: 650px; /* space for fixed containers so footer is pushed down */
+  }
+  .chat-bubble.user {
+    margin-left: auto;
+    background: #2563eb;
+    color: #fff;
+    border-bottom-right-radius: 0.3em;
+  }
+  #send-btn:hover {
+    background: #153692;
+    cursor: pointer;
+  }
+  #history-list li {
+    cursor: pointer;
+    padding: 0.3rem 0.4rem;
+    border-radius: 0.3em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #history-list li:hover {
+    background-color: #e0e7ff;
+  }
+  #history-toggle:hover {
+    background: #1a3b80;
+  }
+</style>
+
+<script>
+  const chatBody = document.getElementById("chat-body");
+  const chatForm = document.getElementById("chat-form");
+  const msgInput = document.getElementById("message-input");
+  const historyList = document.getElementById("history-list");
+  const chatHistoryPanel = document.getElementById("chat-history");
+  const toggleBtn = document.getElementById("history-toggle");
+
+  let chatHistory = JSON.parse(localStorage.getItem('chatHistory') || "[]");
+  let historyVisible = false;
+
+  function saveHistory() {
+    localStorage.setItem('chatHistory', JSON.stringify(chatHistory.slice(0, 0)));
+  }
+
+  function renderHistory() {
+    historyList.innerHTML = "";
+    chatHistory.slice(0, 5).forEach((msg) => {
+      const li = document.createElement("li");
+      li.textContent = `>> ${msg.length > 50 ? msg.substr(0, 47) + "..." : msg}`;
+      li.title = msg;
+      li.onclick = () => {
+        addBubble(msg, "user");
+        sendMessage(msg);
+      };
+      historyList.appendChild(li);
+    });
+  }
+
+  function addBubble(msg, who = "bot") {
+    const bubble = document.createElement("div");
+    bubble.className = "chat-bubble " + who;
+    bubble.innerText = msg;
+    chatBody.appendChild(bubble);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+
+  async function sendMessage(msg) {
+    addBubble("Thinking...", "bot");
+    try {
+      const res = await fetch("/api/chatbot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg }),
+      });
+      const data = await res.json();
+      chatBody.lastElementChild.remove(); // remove "Thinking..."
+      addBubble(data.reply || "[No response]", "bot");
+    } catch (err) {
+      chatBody.lastElementChild.remove();
+      addBubble("Sorry, I couldn't reach the AI service.", "bot");
+    }
+  }
+
+  function toggleHistory() {
+    if (historyVisible) {
+      chatHistoryPanel.style.width = "0";
+      toggleBtn.innerHTML = "☰";
+      historyVisible = false;
+    } else {
+      chatHistoryPanel.style.width = "30%";
+      toggleBtn.innerHTML = "×";
+      historyVisible = true;
+    }
+  }
+
+  chatForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const msg = msgInput.value.trim();
+    if (!msg) return;
+    addBubble(msg, "user");
+    msgInput.value = "";
+    chatHistory.unshift(msg);
+    if (chatHistory.length > 5) chatHistory = chatHistory.slice(0, 5);
+    saveHistory();
+    renderHistory();
+    sendMessage(msg);
+  });
+
+  toggleBtn.addEventListener("click", toggleHistory);
+
+  renderHistory();
+</script>
+
+{% endblock %}

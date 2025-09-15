@@ -1,0 +1,144 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="hero">
+  <!-- LEFT SIDE: Illustration Image -->
+  <div class="hero-image">
+    <img src="{{ url_for('static', filename='images/image0.png') }}" 
+         alt="Insurance agent illustration" 
+         onerror="this.style.display='none'">
+  </div>
+
+  <!-- RIGHT SIDE: Heading, Text, Buttons -->
+  <div class="hero-content">
+    <h1>
+      Keep your customers. <br> Predict churn ahead of time.
+    </h1>
+    <p>
+      Upload your customer data (CSV) or test with single-customer inputs. 
+      Get predictions and actionable insights to reduce churn and improve retention ROI.
+    </p>
+
+    <div class="hero-actions">
+      <a class="btn primary" href="{{ url_for('upload_predict') }}">Start Prediction</a>
+      <a class="btn secondary" href="{{ url_for('dashboard') }}">View Dashboard</a>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Hero container */
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* centers content horizontally */
+  gap: 20px; /* smaller gap */
+  min-height: 90vh;
+  padding: 0 5%;
+  background: linear-gradient(to right, #f0f9ff, #e0f2fe, #f9fafb);
+  flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Illustration */
+.hero-image {
+  flex: 0 0 50%; /* image takes 50% */
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  position: relative;
+}
+.hero-image img {
+  width: 110%; /* slightly larger for overlap */
+  max-width: none;
+  height: auto;
+  opacity: 0.85;
+  border-radius: 16px;
+  mix-blend-mode: multiply;
+  transition: transform 0.4s ease, opacity 0.3s ease;
+}
+.hero-image img:hover {
+  transform: scale(1.05);
+  opacity: 0.95;
+}
+
+/* Text + actions */
+.hero-content {
+  flex: 0 0 45%; /* text takes 45% */
+  text-align: left;
+  max-width: 550px;
+  z-index: 2;
+}
+.hero-content h1 {
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+  margin-bottom: 20px;
+}
+.hero-content p {
+  font-size: 1.1rem;
+  color: #475569;
+  margin-bottom: 25px;
+}
+
+/* Buttons */
+.hero-actions {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+.btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+.btn.primary {
+  background: #2563eb;
+  color: #fff;
+}
+.btn.primary:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+}
+.btn.secondary {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+.btn.secondary:hover {
+  background: #cbd5e1;
+  transform: translateY(-2px);
+}
+
+/* Responsive layout */
+@media (max-width: 992px) {
+  .hero {
+    flex-direction: column;
+    text-align: center;
+    gap: 25px;
+  }
+  .hero-content {
+    text-align: center;
+    flex: 0 0 100%;
+  }
+  .hero-content h1 {
+    font-size: 2.2rem;
+  }
+  .hero-content p {
+    font-size: 1rem;
+  }
+  .hero-actions {
+    justify-content: center;
+  }
+  .hero-image {
+    flex: 0 0 90%;
+  }
+  .hero-image img {
+    width: 100%;
+    opacity: 0.9;
+  }
+}
+</style>
+{% endblock %}

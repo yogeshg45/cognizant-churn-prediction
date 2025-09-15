@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="card">
+  <h2>Prediction Results</h2>
+
+  <p>
+    Total records: <strong>{{ total }}</strong> &nbsp; | &nbsp;
+    Churn predicted: <strong>{{ churned }}</strong> &nbsp; | &nbsp;
+    Avg probability: <strong>{{ avg_prob }}</strong>
+  </p>
+
+  {% if agg_recommendation %}
+  <div class="alert alert-info" style="margin: 10px 0; padding: 10px; border-radius: 6px;">
+    <strong>Recommendation:</strong> {{ agg_recommendation }}
+  </div>
+  {% endif %}
+
+  <div class="download" style="margin-bottom: 15px;">
+    <a class="btn" href="{{ download_link }}">⬇ Download CSV</a>
+    <a class="btn secondary" href="{{ url_for('dashboard') }}">📊 View Dashboard</a>
+  </div>
+
+  <hr/>
+
+  <h3>Preview (first 10 records)</h3>
+  <div style="overflow-x: auto; white-space: nowrap; margin-top: 10px;">
+    {{ preview_table | safe }}
+  </div>
+</div>
+{% endblock %}
