@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: churn_prediction
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    plan: free  # or use 'starter' for faster builds and more resources
+    envVars:
+      - key: GEMINI_API_KEY
+        value: "AIzaSyDh_q12etYVVvBmqqqZzfO5aGiWZ2Z-lB4"   # The key for Gemini LLM

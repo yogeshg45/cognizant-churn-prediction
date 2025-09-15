@@ -1,0 +1,6 @@
+Flask
+pandas
+joblib
+gdown
+google-generativeai
+werkzeug
