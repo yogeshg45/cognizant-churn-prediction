@@ -7,36 +7,35 @@ import pandas as pd
 import os
 import json
 from werkzeug.utils import secure_filename
-
-# For Google Drive model download
-import gdown
+import zipfile
 
 # Gemini LLM Integration
 import google.generativeai as genai
-
 # Replace with your Gemini API key
 GEMINI_API_KEY = "AIzaSyDh_q12etYVVvBmqqqZzfO5aGiWZ2Z-lB4"
 genai.configure(api_key=GEMINI_API_KEY)
 gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 
-# --- Google Drive Model Download ---
-DRIVE_MODEL_ID = "1MihDLFj1ZRnVG8j5UB2KR9h71xZwsU-M"
+# Model zip and expected extracted filename
+MODEL_ZIP = "churn_pipeline.zip"
 MODEL_FILENAME = "churn_pipeline.joblib"
 MODEL_PATH = MODEL_FILENAME
-DRIVE_URL = f"https://drive.google.com/uc?id={DRIVE_MODEL_ID}"
-
-def ensure_model_downloaded(model_path=MODEL_PATH):
-    """Download model file from Google Drive if not exists."""
-    if not os.path.exists(model_path):
-        print(f"[INFO] Downloading model from Google Drive: {DRIVE_URL}")
-        gdown.download(DRIVE_URL, model_path, quiet=False)
-    else:
-        print("[INFO] Model file already exists locally.")
 
 # Configuration
 UPLOAD_FOLDER = "uploads"
 ALLOWED_EXTENSIONS = {"csv"}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def unzip_model(zip_path=MODEL_ZIP, extract_to="."):
+    """Unzip the model zip file if the extracted joblib does not exist."""
+    if not os.path.exists(MODEL_PATH):
+        if not os.path.exists(zip_path):
+            raise FileNotFoundError(f"{zip_path} not found. Please upload the zip file.")
+        print(f"[INFO] Extracting model file from {zip_path}...")
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_to)
+        if not os.path.exists(MODEL_PATH):
+            raise FileNotFoundError(f"Model file {MODEL_FILENAME} not found after extracting zip.")
 
 # Model loader
 def load_model(path=MODEL_PATH):
@@ -45,7 +44,7 @@ def load_model(path=MODEL_PATH):
     If the saved object is a dict, search for the first value with .predict and return it.
     """
     if not os.path.exists(path):
-        raise FileNotFoundError(f"{path} not found. Place your joblib at project root.")
+        raise FileNotFoundError(f"{path} not found.")
     data = joblib.load(path)
     if hasattr(data, "predict"):
         return data
@@ -57,9 +56,9 @@ def load_model(path=MODEL_PATH):
         raise ValueError("No valid model (with .predict) found inside joblib dict.")
     raise ValueError("Unsupported object stored in joblib.")
 
-# --- Check/download model and load it, fail early but allow app to run ---
+# Check and unzip model then load it, fail early but allow app to run
 try:
-    ensure_model_downloaded()
+    unzip_model()
     model = load_model(MODEL_PATH)
     print("[INFO] Model loaded successfully.")
 except Exception as e:
@@ -107,11 +106,9 @@ def get_aggregate_recommendation(avg_prob):
         return "✅ Overall churn risk is low. Keep monitoring and maintain strong engagement."
 
 # -- Flask App & Routes --
-
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.secret_key = "replace-this-with-a-secure-random-key"
-
 latest_predictions_path = None
 
 @app.route("/")
@@ -331,4 +328,3 @@ def uploaded_file(filename):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))  # fallback to Render default port 10000
     app.run(host="0.0.0.0", port=port)
-
