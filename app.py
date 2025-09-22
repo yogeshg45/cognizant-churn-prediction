@@ -8,10 +8,9 @@ import os
 import json
 from werkzeug.utils import secure_filename
 import zipfile
-
-# Gemini LLM Integration
 import google.generativeai as genai
-# Replace with your Gemini API key
+
+# Gemini API Key (use your own, keep private in production!)
 GEMINI_API_KEY = "AIzaSyDh_q12etYVVvBmqqqZzfO5aGiWZ2Z-lB4"
 genai.configure(api_key=GEMINI_API_KEY)
 gemini_model = genai.GenerativeModel("gemini-1.5-flash")
@@ -21,13 +20,11 @@ MODEL_ZIP = os.path.join(BASE_DIR, "churn_pipeline.zip")
 MODEL_FILENAME = "churn_pipeline.joblib"
 MODEL_PATH = os.path.join(BASE_DIR, MODEL_FILENAME)
 
-# Configuration
 UPLOAD_FOLDER = "uploads"
 ALLOWED_EXTENSIONS = {"csv"}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def unzip_model(zip_path=MODEL_ZIP, extract_to="."):
-    """Unzip the model zip file if the extracted joblib does not exist."""
     if not os.path.exists(MODEL_PATH):
         if not os.path.exists(zip_path):
             raise FileNotFoundError(f"{zip_path} not found. Please upload the zip file.")
@@ -37,12 +34,7 @@ def unzip_model(zip_path=MODEL_ZIP, extract_to="."):
         if not os.path.exists(MODEL_PATH):
             raise FileNotFoundError(f"Model file {MODEL_FILENAME} not found after extracting zip.")
 
-# Model loader
 def load_model(path=MODEL_PATH):
-    """
-    Load model from joblib.
-    If the saved object is a dict, search for the first value with .predict and return it.
-    """
     if not os.path.exists(path):
         raise FileNotFoundError(f"{path} not found.")
     data = joblib.load(path)
@@ -56,7 +48,6 @@ def load_model(path=MODEL_PATH):
         raise ValueError("No valid model (with .predict) found inside joblib dict.")
     raise ValueError("Unsupported object stored in joblib.")
 
-# Check and unzip model then load it, fail early but allow app to run
 try:
     unzip_model()
     model = load_model(MODEL_PATH)
@@ -65,14 +56,10 @@ except Exception as e:
     model = None
     print(f"[WARN] Model load failed: {e}")
 
-# Utility functions
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def select_feature_columns(df):
-    """
-    Prefer feature_0..feature_15. Otherwise return numeric columns excluding known result columns.
-    """
     feat_cols = [f"feature_{i}" for i in range(16)]
     if all(c in df.columns for c in feat_cols):
         return feat_cols
@@ -82,7 +69,6 @@ def select_feature_columns(df):
     return numeric_cols
 
 def get_recommendation(prob):
-    """Map churn probability to business recommendation."""
     if prob is None:
         return "No probability available."
     if prob >= 0.8:
@@ -95,7 +81,6 @@ def get_recommendation(prob):
         return "✅ Low risk: Maintain engagement with regular communication and satisfaction surveys."
 
 def get_aggregate_recommendation(avg_prob):
-    """Company-wide action plan based on average churn probability."""
     if avg_prob is None:
         return "No predictions available yet."
     if avg_prob >= 0.6:
@@ -105,7 +90,6 @@ def get_aggregate_recommendation(avg_prob):
     else:
         return "✅ Overall churn risk is low. Keep monitoring and maintain strong engagement."
 
-# -- Flask App & Routes --
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.secret_key = "replace-this-with-a-secure-random-key"
@@ -219,11 +203,15 @@ def results(filename):
     churned = int((df["Prediction"] == "Churn").sum()) if "Prediction" in df.columns else 0
     avg_prob = float(df["Churn_Probability"].mean()) if "Churn_Probability" in df.columns else None
     agg_recommendation = get_aggregate_recommendation(avg_prob)
-    return render_template("results.html",
-                           preview_table=preview_html,
-                           download_link=url_for("download_file", filename=filename),
-                           total=total, churned=churned, avg_prob=avg_prob,
-                           agg_recommendation=agg_recommendation)
+    return render_template(
+        "results.html",
+        preview_table=preview_html,
+        download_link=url_for("download_file", filename=filename),
+        total=total,
+        churned=churned,
+        avg_prob=avg_prob,
+        agg_recommendation=agg_recommendation
+    )
 
 @app.route("/download/<path:filename>")
 def download_file(filename):
@@ -252,15 +240,17 @@ def dashboard():
             feature_importance = sorted(zip(names, imps), key=lambda x: x[1], reverse=True)[:10]
     except Exception:
         feature_importance = []
-    return render_template("dashboard.html",
-                           total=total,
-                           churn_count=churn_count,
-                           no_churn_count=no_churn_count,
-                           avg_prob=avg_prob,
-                           pie_labels=json.dumps(pie_labels),
-                           pie_values=json.dumps(pie_values),
-                           probs=json.dumps(probs),
-                           feature_importance=feature_importance)
+    return render_template(
+        "dashboard.html",
+        total=total,
+        churn_count=churn_count,
+        no_churn_count=no_churn_count,
+        avg_prob=avg_prob,
+        pie_labels=json.dumps(pie_labels),
+        pie_values=json.dumps(pie_values),
+        probs=json.dumps(probs),
+        feature_importance=feature_importance
+    )
 
 @app.route("/recommendations")
 def recommendations():
@@ -272,9 +262,11 @@ def recommendations():
         if "Churn_Probability" in df.columns:
             avg_prob = float(df["Churn_Probability"].mean())
             agg_recommendation = get_aggregate_recommendation(avg_prob)
-    return render_template("recommendations.html",
-                           avg_prob=avg_prob,
-                           agg_recommendation=agg_recommendation)
+    return render_template(
+        "recommendations.html",
+        avg_prob=avg_prob,
+        agg_recommendation=agg_recommendation
+    )
 
 @app.route("/about")
 def about():
@@ -289,7 +281,6 @@ def about():
 def chatbot():
     return render_template("chatbot.html")
 
-# Gemini LLM chatbot API endpoint
 @app.route("/api/chatbot", methods=["POST"])
 def chatbot_api():
     user_message = request.json.get("message", "")
@@ -326,6 +317,5 @@ def uploaded_file(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # fallback to Render default port 10000
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
