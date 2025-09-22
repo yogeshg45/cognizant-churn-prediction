@@ -25,16 +25,23 @@ ALLOWED_EXTENSIONS = {"csv"}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def unzip_model(zip_path=MODEL_ZIP, extract_to="."):
+    """
+    Unzip the model zip if churn_pipeline.joblib does not exist.
+    """
     if not os.path.exists(MODEL_PATH):
         if not os.path.exists(zip_path):
-            raise FileNotFoundError(f"{zip_path} not found. Please upload the zip file.")
-        print(f"[INFO] Extracting model file from {zip_path}...")
+            raise FileNotFoundError(f"{zip_path} not found. Please upload the zip file or place it in the app directory.")
+        print(f"[INFO] Extracting model file from {zip_path} ...")
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(extract_to)
         if not os.path.exists(MODEL_PATH):
-            raise FileNotFoundError(f"Model file {MODEL_FILENAME} not found after extracting zip.")
+            raise FileNotFoundError(f"Model file {MODEL_FILENAME} not found after extracting zip. Check its name and location.")
 
 def load_model(path=MODEL_PATH):
+    """
+    Load the model from joblib file.
+    If saved object is a dict, look for first value with .predict.
+    """
     if not os.path.exists(path):
         raise FileNotFoundError(f"{path} not found.")
     data = joblib.load(path)
@@ -46,15 +53,16 @@ def load_model(path=MODEL_PATH):
                 print(f"[INFO] Using model found at dict key: {key}")
                 return val
         raise ValueError("No valid model (with .predict) found inside joblib dict.")
-    raise ValueError("Unsupported object stored in joblib.")
+    raise ValueError("Unsupported object in joblib.")
 
+# Diagnostics: on any error with model load, print and surface message
 try:
     unzip_model()
     model = load_model(MODEL_PATH)
     print("[INFO] Model loaded successfully.")
 except Exception as e:
     model = None
-    print(f"[WARN] Model load failed: {e}")
+    print("[WARN] Model load failed:", e)
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -92,6 +100,7 @@ def get_aggregate_recommendation(avg_prob):
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+# Remember: replace this with a secure random key in production!
 app.secret_key = "replace-this-with-a-secure-random-key"
 latest_predictions_path = None
 
@@ -104,7 +113,7 @@ def upload_predict():
     global latest_predictions_path, model
     if request.method == "POST":
         if model is None:
-            flash("Prediction model not loaded on server. Please contact admin.", "error")
+            flash("Prediction model not loaded on server. Please contact admin. (See server logs for more info.)", "error")
             return redirect(request.url)
         if "file" not in request.files:
             flash("No file part", "error")
