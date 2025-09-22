@@ -16,10 +16,10 @@ GEMINI_API_KEY = "AIzaSyDh_q12etYVVvBmqqqZzfO5aGiWZ2Z-lB4"
 genai.configure(api_key=GEMINI_API_KEY)
 gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 
-# Model zip and expected extracted filename
-MODEL_ZIP = "churn_pipeline.zip"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_ZIP = os.path.join(BASE_DIR, "churn_pipeline.zip")
 MODEL_FILENAME = "churn_pipeline.joblib"
-MODEL_PATH = MODEL_FILENAME
+MODEL_PATH = os.path.join(BASE_DIR, MODEL_FILENAME)
 
 # Configuration
 UPLOAD_FOLDER = "uploads"
@@ -328,3 +328,4 @@ def uploaded_file(filename):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))  # fallback to Render default port 10000
     app.run(host="0.0.0.0", port=port)
+
